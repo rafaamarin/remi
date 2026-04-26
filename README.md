@@ -2,7 +2,7 @@
 
 A low-latency polyphonic drum sampler for the terminal. Trigger samples via a DualShock 4 controller or keyboard, manage sound libraries from a TUI sidebar, and remap pads visually — all without leaving the CLI.
 
-![REMI splash](.remi-slant.png)
+![REMI splash](remi-slant.png)
 
 ---
 
