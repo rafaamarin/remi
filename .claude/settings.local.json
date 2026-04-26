@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(uv venv *)",
+      "Bash(uv pip *)",
+      "Bash(.venv/bin/mypy *)"
+    ]
+  }
+}
