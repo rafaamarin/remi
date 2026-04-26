@@ -85,7 +85,7 @@ class SamplerCore:
         event_queue: EventQueue | None = None,
         on_event: EventCallback | None = None,
     ) -> None:
-        self._assets: dict[PadId, io.BytesIO] = assets if assets is not None else DUMMY_ASSETS
+        self._initial_assets = assets
         self._event_queue = event_queue
         self._on_event = on_event
 
@@ -106,63 +106,89 @@ class SamplerCore:
     def is_running(self) -> bool:
         return self._running
 
+    def load_kit(self, assets: dict[PadId, io.BytesIO]) -> None:
+        """Carga un nuevo set de sonidos en caliente.
+
+        Si el sampler ya está en marcha, los sonidos se sustituyen de forma
+        atómica para evitar interrupciones o crashes en el thread de audio.
+        """
+        new_sounds: dict[PadId, pygame.mixer.Sound] = {}
+        
+        # 1. Decodificación fuera del lock (puede ser lento)
+        for pad_id, buf in assets.items():
+            buf.seek(0)
+            # IMPORTANTE: No usar buffer=buf.read(), eso interpreta el WAV como PCM bruto (ruido estático).
+            # Al pasar el objeto BytesIO directamente, pygame lee la cabecera y decodifica correctamente.
+            try:
+                sound = pygame.mixer.Sound(buf)
+            except pygame.error as e:
+                # Si un WAV está corrupto, lo ignoramos o ponemos un sonido vacío para no romper el kit
+                continue
+
+            with self._lock:
+                vol = self._volumes[pad_id]
+            sound.set_volume(vol)
+            new_sounds[pad_id] = sound
+
+        # 2. Swap atómico bajo lock
+        with self._lock:
+            # Liberar explícitamente los sonidos antiguos para ayudar al GC
+            self._sounds.clear()
+            self._sounds = new_sounds
+
     def start(self) -> None:
-        if self._running:
-            return
+        with self._lock:
+            if self._running:
+                return
 
-        # Forzar el stack de audio moderno en Linux antes de tocar SDL.
-        os.environ.setdefault("SDL_AUDIODRIVER", _DEFAULT_SDL_AUDIODRIVER)
+            # Forzar el stack de audio moderno en Linux antes de tocar SDL.
+            os.environ.setdefault("SDL_AUDIODRIVER", _DEFAULT_SDL_AUDIODRIVER)
 
-        # pre_init DEBE preceder a pygame.init() para fijar el buffer pequeño.
-        # allowedchanges=0 prohíbe que SDL renegocie ningún parámetro a nuestras
-        # espaldas — preferimos que falle a que el mixer arranque con buffer 1024.
-        pygame.mixer.pre_init(
-            MIXER_FREQUENCY,
-            MIXER_SIZE,
-            MIXER_CHANNELS,
-            MIXER_BUFFER,
-            allowedchanges=0,
-        )
-        pygame.init()
-        if not pygame.mixer.get_init():
-            pygame.mixer.init(
+            # pre_init DEBE preceder a pygame.init() para fijar el buffer pequeño.
+            pygame.mixer.pre_init(
                 MIXER_FREQUENCY,
                 MIXER_SIZE,
                 MIXER_CHANNELS,
                 MIXER_BUFFER,
                 allowedchanges=0,
             )
+            pygame.init()
+            if not pygame.mixer.get_init():
+                pygame.mixer.init(
+                    MIXER_FREQUENCY,
+                    MIXER_SIZE,
+                    MIXER_CHANNELS,
+                    MIXER_BUFFER,
+                    allowedchanges=0,
+                )
 
-        pygame.joystick.init()
+            pygame.joystick.init()
 
-        # Blindar la cola de eventos de SDL de basura irrelevante nativamente:
-        # Esto previene saturación de RAM/CPU y permite coexistencia con Textual.
-        pygame.event.set_blocked(None)
-        pygame.event.set_allowed([
-            pygame.JOYBUTTONDOWN,
-            pygame.JOYBUTTONUP,
-            pygame.JOYAXISMOTION,
-            pygame.JOYDEVICEADDED,
-            pygame.JOYDEVICEREMOVED,
-            pygame.QUIT,
-            pygame.KEYDOWN,
-            pygame.KEYUP,
-        ])
+            pygame.event.set_blocked(None)
+            pygame.event.set_allowed([
+                pygame.JOYBUTTONDOWN,
+                pygame.JOYBUTTONUP,
+                pygame.JOYAXISMOTION,
+                pygame.JOYDEVICEADDED,
+                pygame.JOYDEVICEREMOVED,
+                pygame.QUIT,
+                pygame.KEYDOWN,
+                pygame.KEYUP,
+            ])
 
-        if pygame.joystick.get_count() > 0:
-            try:
-                self._joystick = pygame.joystick.Joystick(0)
-                self._joystick.init()
-            except pygame.error:
-                pass
+            if pygame.joystick.get_count() > 0:
+                try:
+                    self._joystick = pygame.joystick.Joystick(0)
+                    self._joystick.init()
+                except pygame.error:
+                    pass
 
-        for pad_id, buf in self._assets.items():
-            buf.seek(0)
-            sound = pygame.mixer.Sound(buffer=buf.read())
-            sound.set_volume(self._volumes[pad_id])
-            self._sounds[pad_id] = sound
+            self._running = True
 
-        self._running = True
+        # Cargar assets iniciales fuera del lock (load_kit ya maneja su propio lock)
+        assets_to_load = self._initial_assets if self._initial_assets is not None else DUMMY_ASSETS
+        self.load_kit(assets_to_load)
+
         self._thread = threading.Thread(
             target=self._poll_loop,
             name="SamplerCore-Poll",
@@ -179,7 +205,8 @@ class SamplerCore:
             self._thread.join(timeout=1.0)
             self._thread = None
 
-        self._sounds.clear()
+        with self._lock:
+            self._sounds.clear()
 
         if self._joystick is not None:
             self._joystick.quit()
@@ -194,7 +221,7 @@ class SamplerCore:
         new_pressed = state == PadState.PRESSED
         with self._lock:
             if self._pad_states[pad_id] == new_pressed:
-                return  # edge detection: sin transición, no-op
+                return
             self._pad_states[pad_id] = new_pressed
         self._handle_transition(pad_id, state)
 
@@ -208,12 +235,12 @@ class SamplerCore:
             self._volumes[pad_id] = clamped
             sound = self._sounds.get(pad_id)
         if sound is not None:
-            # set_volume es retroactivo: aplica a instancias ya sonando.
             sound.set_volume(clamped)
 
     def _handle_transition(self, pad_id: PadId, state: PadState) -> None:
         if state == PadState.PRESSED:
-            sound = self._sounds.get(pad_id)
+            with self._lock:
+                sound = self._sounds.get(pad_id)
             if sound is not None:
                 sound.play()
         self._emit_event(

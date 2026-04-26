@@ -6,7 +6,12 @@
       "Bash(.venv/bin/pip install *)",
       "Bash(uv venv *)",
       "Bash(uv pip *)",
-      "Bash(.venv/bin/mypy *)"
+      "Bash(.venv/bin/mypy *)",
+      "Bash(.venv/bin/python *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)",
+      "Bash(bluetoothctl devices *)",
+      "Bash(lsusb)"
     ]
   }
 }

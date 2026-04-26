@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import queue
 from typing import Callable, Protocol
 
@@ -56,6 +57,15 @@ class SamplerInterface(Protocol):
 
     def stop(self) -> None:
         """Detiene thread, libera mixer y joystick. Idempotente."""
+        ...
+
+    def load_kit(self, assets: dict[PadId, io.BytesIO]) -> None:
+        """Sustituye el kit cargado de forma atómica.
+
+        Decodifica los WAV fuera del lock; el swap del dict de sonidos ocurre
+        bajo lock. Pensado para hot-swap: el thread de polling no se bloquea.
+        Thread-safe.
+        """
         ...
 
     def trigger_pad(self, pad_id: PadId, state: PadState) -> None:
