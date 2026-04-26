@@ -1,69 +1,116 @@
-# 🎹 REMI (Runtime Engine for Musical Instruments)
+# REMI — Terminal MIDI Sampler
 
-**REMI** is a high-performance polyphonic sampler built for the terminal. Forget bloated GUIs that eat your RAM and lag your workflow. REMI is designed for engineers who want professional-grade sampling without leaving the CLI.
+A low-latency polyphonic drum sampler for the terminal. Trigger samples via a DualShock 4 controller or keyboard, manage sound libraries from a TUI sidebar, and remap pads visually — all without leaving the CLI.
 
-> **🔴 Red Team Warning:** This isn't a toy. If you're looking for shiny gradients and useless animations, move along. We optimize for the event loop, audit for memory leaks, and obsess over latency so your CPU doesn't have to.
-
----
-
-## 🚀 Why REMI?
-
-Most modern samplers are "God Classes" wrapped in unnecessary abstraction layers. REMI is built with a single obsession: **Performance over Pyrotechnics.**
-
-- **TUI-First:** Built on [Textual](https://textual.textualize.io/) for a fluid, snappy, and hardware-accelerated terminal experience.
-- **GIL-Aware Engineering:** **Requires Python 3.11/3.12+**. We take advantage of the latest performance improvements in the Python runtime to ensure the audio thread doesn't choke.
-- **Strict Architecture:** Clean separation between `SamplerCore` and the UI. No spaghetti code allowed.
-- **Asset Management:** Efficient sample handling designed to load libraries like *Growlybass* without saturating the data bus.
-- **Low Latency:** Designed to run on "real-world" hardware (from old ASUS TUF laptops to vintage MacBooks) without audio stuttering.
+![REMI splash](.remi-slant.png)
 
 ---
 
-## 🛠️ Technical Stack
+## Features
 
-- **Runtime:** Python 3.11 / 3.12+ (Mandatory for GIL performance and specialized optimizations).
-- **Interface:** Textual (Rich TUI framework).
-- **Audio Core:** Focused on buffer management and interrupt-driven logic.
-- **Mapping:** Dynamic mapping system for triggering samples via specific MIDI/Keyboard triggers.
-
----
-
-## 📦 Installation (For the Brave)
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/rafaamarin/remi.git
-   cd remi
-   ```
-
-2. **Set up your environment (don't pollute your system):**
-   ```bash
-   python3.12 -m venv .venv
-   source .venv/bin/activate
-   pip install -e .
-   ```
-
-3. **Ignite the engine:**
-   ```bash
-   python main.py
-   ```
+- **2x2 pad layout** — L1, R1 (top row) and L2, R2 (bottom row), matching DS4 shoulder buttons and triggers
+- **DualShock 4 support** — L1/R1 as buttons, L2/R2 as analog triggers (threshold: 0.5)
+- **Keyboard fallback** — Q/W/A/S when no joystick is detected
+- **Hotplug** — controller connect/disconnect handled at runtime without restart
+- **Hot-swap kits** — load a new sound library atomically while the engine is running
+- **Library browser** — sidebar lists all directories under the project root; select to load
+- **Visual pad mapper** — press `m` to assign WAV files to pads; saved to `remi.json` per kit
+- **Sub-12 ms latency** — mixer initialized at 44 100 Hz with a 512-sample buffer before the TUI starts
+- **Security** — path traversal protection and per-sample 25 MB OOM guard on asset loading
 
 ---
 
-## 💂‍♂️ The Audit Protocol
+## Requirements
 
-This repo is not a democracy. Every line of code undergoes a "Red Team" audit to prevent:
-- **RAM Leaks:** Especially during asset loading/unloading.
-- **Event Loop Blocking:** Synchronous processing is a crime here.
-- **Bad OOP Design:** No bloated classes or unnecessary coupling.
-
-If you want to contribute, be prepared for us to tear your PR apart in search of inefficiencies. **We want code that flies.**
+- Python 3.12+
+- PipeWire, PulseAudio, or ALSA (Linux)
+- A DualShock 4 connected via USB or Bluetooth (optional)
 
 ---
 
-## 🎹 Included Library: Growlybass
-REMI ships with a sample of **Growlybass** for testing. It’s an aggressive, high-character bass—perfect for testing the motor's transient response.
+## Installation
+
+```bash
+git clone https://github.com/rafaamarin/remi.git
+cd remi
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
 
 ---
 
-## 📄 License
-MIT. Do whatever you want, but if you build something amazing, let us know. If the code breaks your machine, don't say we didn't warn you about the performance-first mindset.
+## Running
+
+```bash
+python main.py
+```
+
+The TUI starts with a gradient ASCII header, a 2x2 pad grid, and a library sidebar on the right.
+
+---
+
+## Keybindings
+
+| Key       | Action                            |
+|-----------|-----------------------------------|
+| `Q`       | Trigger pad L1                    |
+| `W`       | Trigger pad R1                    |
+| `A`       | Trigger pad L2                    |
+| `S`       | Trigger pad R2                    |
+| `M`       | Open pad mapper for selected kit  |
+| `Escape`  | Quit                              |
+
+---
+
+## Sound Libraries
+
+REMI discovers kit directories automatically. Place a folder with `.wav` files in the project root and it will appear in the sidebar. Select it to load.
+
+Included: **Growlybass** — an aggressive sampled electric bass, good for testing transient response across all four pads.
+
+To map specific samples to pads, select the kit in the sidebar and press `M`. The mapping is saved to `remi.json` inside the kit directory.
+
+---
+
+## Architecture
+
+```
+main.py              Entry point — wires SamplerCore and RemiApp
+src/
+  core/
+    types.py         PadId, PadState, PadEvent (frozen dataclass)
+    interface.py     SamplerInterface Protocol (no pygame dependency)
+    sampler.py       SamplerCore — pygame-ce audio + DS4 polling thread
+    assets.py        load_kit_from_dir, scan_libraries, save_mapping
+  ui/
+    app.py           RemiApp (Textual) — grid, sidebar, kit loading worker
+    mapping_modal.py MappingModal — visual WAV-to-pad assignment
+    splash.py        Splash screen
+```
+
+**Threading model:** `SamplerCore` runs a daemon thread (`SamplerCore-Poll`) that blocks on `pygame.event.wait()`, consuming zero CPU while idle. Events are pushed into a `queue.Queue(maxsize=256)` and drained by a Textual worker thread, so neither layer ever blocks the other.
+
+---
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+mypy src          # strict type checking
+pytest            # tests
+```
+
+To test the audio engine standalone (without the TUI):
+
+```bash
+python -m src.core.sampler
+```
+
+Opens a minimal SDL window; use Q/W/A/S or a connected DS4. ESC to exit.
+
+---
+
+## License
+
+MIT.
