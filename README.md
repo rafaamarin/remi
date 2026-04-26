@@ -4,6 +4,11 @@ A low-latency polyphonic drum sampler for the terminal. Trigger samples via a Du
 
 ![REMI splash](remi-slant.png)
 
+   / __ \/ ____/  |/  /  _/
+  / /_/ / __/ / /|_/ // /  
+ / _, _/ /___/ /  / // /   
+/_/ |_/_____/_/  /_/___/
+
 ---
 
 ## Features
