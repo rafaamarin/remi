@@ -1,11 +1,8 @@
 # REMI — Terminal MIDI Sampler
 
-<img width="1983" height="793" alt="image" src="https://github.com/user-attachments/assets/325993e9-5160-4d43-be86-42daffc5b723" />
-
-
 A low-latency polyphonic drum sampler for the terminal. Trigger samples via a DualShock 4 controller or keyboard, manage sound libraries from a TUI sidebar, and remap pads visually — all without leaving the CLI.
 
-  ![REMI splash](remi-slant.png)
+<img width="1983" height="793" alt="image" src="https://github.com/user-attachments/assets/325993e9-5160-4d43-be86-42daffc5b723" />
 
 ---
 
