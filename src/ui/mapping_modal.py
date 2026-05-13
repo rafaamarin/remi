@@ -77,10 +77,15 @@ class MappingModal(ModalScreen[dict[PadId, str] | None]):
     """
 
     BINDINGS: ClassVar = [
-        ("q", "assign('L1')", "Asignar L1"),
-        ("w", "assign('R1')", "Asignar R1"),
-        ("a", "assign('L2')", "Asignar L2"),
-        ("s", "assign('R2')", "Asignar R2"),
+        ("q", "assign('PAD1')", "Asignar PAD1"),
+        ("w", "assign('PAD2')", "Asignar PAD2"),
+        ("e", "assign('PAD3')", "Asignar PAD3"),
+        ("a", "assign('PAD4')", "Asignar PAD4"),
+        ("s", "assign('PAD5')", "Asignar PAD5"),
+        ("d", "assign('PAD6')", "Asignar PAD6"),
+        ("z", "assign('PAD7')", "Asignar PAD7"),
+        ("x", "assign('PAD8')", "Asignar PAD8"),
+        ("c", "assign('PAD9')", "Asignar PAD9"),
         ("escape", "cancel", "Cancelar"),
         ("enter", "save", "Guardar y Salir"),
     ]
@@ -115,7 +120,7 @@ class MappingModal(ModalScreen[dict[PadId, str] | None]):
                         with Vertical(classes="pad-slot", id=f"slot-{pad_id}"):
                             yield Label(f"Pad {pad_id}", classes="pad-name")
                             yield Label(self.mapping[pad_id] or "(vacío)", classes="assigned-file", id=f"label-{pad_id}")
-            yield Label("Usa Q/W/A/S para asignar el archivo seleccionado. ENTER para guardar.", classes="instruction")
+            yield Label("Usa QWE/ASD/ZXC para asignar el archivo seleccionado. ENTER para guardar.", classes="instruction")
             yield Footer()
 
     def on_mount(self) -> None:

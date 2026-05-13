@@ -41,7 +41,7 @@ def _ascii_header_text() -> Text:
         g = int(_GRADIENT_START[1] + (_GRADIENT_END[1] - _GRADIENT_START[1]) * t)
         b = int(_GRADIENT_START[2] + (_GRADIENT_END[2] - _GRADIENT_START[2]) * t)
         text.append(line + "\n", style=f"bold #{r:02x}{g:02x}{b:02x}")
-    text.append("low-latency MIDI sampler · DS4 / QWAS", style="italic dim")
+    text.append("low-latency MIDI sampler · DS4 / QWE ASD ZXC", style="italic dim")
     return text
 
 
@@ -117,7 +117,7 @@ class RemiApp(App[None]):
     }
 
     #pad-grid {
-        grid-size: 2 2;
+        grid-size: 3 3;
         grid-gutter: 1 3;
         height: 1fr;
         width: 1fr;
@@ -165,10 +165,15 @@ class RemiApp(App[None]):
     """
 
     BINDINGS: ClassVar[Any] = [
-        ("q", "trigger_pad('L1')", "Pad L1"),
-        ("w", "trigger_pad('R1')", "Pad R1"),
-        ("a", "trigger_pad('L2')", "Pad L2"),
-        ("s", "trigger_pad('R2')", "Pad R2"),
+        ("q", "trigger_pad('PAD1')", "PAD1"),
+        ("w", "trigger_pad('PAD2')", "PAD2"),
+        ("e", "trigger_pad('PAD3')", "PAD3"),
+        ("a", "trigger_pad('PAD4')", "PAD4"),
+        ("s", "trigger_pad('PAD5')", "PAD5"),
+        ("d", "trigger_pad('PAD6')", "PAD6"),
+        ("z", "trigger_pad('PAD7')", "PAD7"),
+        ("x", "trigger_pad('PAD8')", "PAD8"),
+        ("c", "trigger_pad('PAD9')", "PAD9"),
         ("m", "open_mapper", "Mapear Kit"),
         ("escape", "quit", "Salir"),
     ]
@@ -190,8 +195,12 @@ class RemiApp(App[None]):
         with Horizontal(id="body"):
             with Vertical(id="pad-pane"):
                 with Grid(id="pad-grid"):
-                    # Row-major: [L1, R1] arriba, [L2, R2] abajo (columnas izq/der → q/w, a/s).
-                    pad_layout: tuple[PadId, ...] = ("L1", "R1", "L2", "R2")
+                    # Row-major: QWE, ASD, ZXC
+                    pad_layout: tuple[PadId, ...] = (
+                        "PAD1", "PAD2", "PAD3",
+                        "PAD4", "PAD5", "PAD6",
+                        "PAD7", "PAD8", "PAD9",
+                    )
                     for pad_id in pad_layout:
                         pad = DrumPad(pad_id)
                         self._pads[pad_id] = pad
@@ -204,7 +213,7 @@ class RemiApp(App[None]):
 
     def on_mount(self) -> None:
         self.title = "REMI"
-        self.sub_title = "DS4" if self._sampler.has_joystick else "Teclado Q/W/A/S"
+        self.sub_title = "DS4" if self._sampler.has_joystick else "Teclado QWE/ASD/ZXC"
         self._refresh_libraries()
         self._poll_sampler_events()
 
@@ -287,15 +296,16 @@ class RemiApp(App[None]):
         """Abre el modal de mapeo para el kit seleccionado actualmente."""
         list_view = self.query_one("#lib-list", ListView)
         selected_item = list_view.highlighted_child
-        if isinstance(selected_item, LibraryItem) and selected_item.kit_path:
+        if isinstance(selected_item, LibraryItem) and selected_item.kit_path is not None:
+            kit_path_non_none = selected_item.kit_path
             def handle_mapping(mapping: dict[PadId, str] | None) -> None:
                 if mapping:
                     # Guardar a disco
-                    save_mapping(selected_item.kit_path, mapping)
+                    save_mapping(kit_path_non_none, mapping)
                     # Recargar el kit para aplicar cambios
-                    self._load_kit_worker(selected_item.kit_path)
+                    self._load_kit_worker(kit_path_non_none)
                     self.notify("Mapeo guardado y kit recargado.")
 
-            self.push_screen(MappingModal(selected_item.kit_path), handle_mapping)
+            self.push_screen(MappingModal(kit_path_non_none), handle_mapping)
         else:
             self.notify("Selecciona una librería válida para mapear", severity="warning")
