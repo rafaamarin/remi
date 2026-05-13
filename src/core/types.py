@@ -4,9 +4,13 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Final, Literal
 
-PadId = Literal["L1", "L2", "R1", "R2"]
+PadId = Literal["PAD1", "PAD2", "PAD3", "PAD4", "PAD5", "PAD6", "PAD7", "PAD8", "PAD9"]
 
-PAD_IDS: Final[tuple[PadId, ...]] = ("L1", "L2", "R1", "R2")
+PAD_IDS: Final[tuple[PadId, ...]] = (
+    "PAD1", "PAD2", "PAD3",
+    "PAD4", "PAD5", "PAD6",
+    "PAD7", "PAD8", "PAD9"
+)
 
 
 class PadState(Enum):

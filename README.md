@@ -8,9 +8,9 @@ A low-latency polyphonic drum sampler for the terminal. Trigger samples via a Du
 
 ## Features
 
-- **2x2 pad layout** — L1, R1 (top row) and L2, R2 (bottom row), matching DS4 shoulder buttons and triggers
-- **DualShock 4 support** — L1/R1 as buttons, L2/R2 as analog triggers (threshold: 0.5)
-- **Keyboard fallback** — Q/W/A/S when no joystick is detected
+- **3x3 pad layout** — Support for up to 9 pads.
+- **DualShock 4 support** — First 4 pads mapped to L1/R1 as buttons, L2/R2 as analog triggers (threshold: 0.5)
+- **Keyboard fallback** — QWE/ASD/ZXC mapped to pads 1-9 when no joystick is detected
 - **Hotplug** — controller connect/disconnect handled at runtime without restart
 - **Hot-swap kits** — load a new sound library atomically while the engine is running
 - **Library browser** — sidebar lists all directories under the project root; select to load
@@ -46,7 +46,7 @@ pip install -e .
 python main.py
 ```
 
-The TUI starts with a gradient ASCII header, a 2x2 pad grid, and a library sidebar on the right.
+The TUI starts with a gradient ASCII header, a 3x3 pad grid, and a library sidebar on the right.
 
 ---
 
@@ -54,10 +54,15 @@ The TUI starts with a gradient ASCII header, a 2x2 pad grid, and a library sideb
 
 | Key       | Action                            |
 |-----------|-----------------------------------|
-| `Q`       | Trigger pad L1                    |
-| `W`       | Trigger pad R1                    |
-| `A`       | Trigger pad L2                    |
-| `S`       | Trigger pad R2                    |
+| `Q`       | Trigger PAD1                      |
+| `W`       | Trigger PAD2                      |
+| `E`       | Trigger PAD3                      |
+| `A`       | Trigger PAD4                      |
+| `S`       | Trigger PAD5                      |
+| `D`       | Trigger PAD6                      |
+| `Z`       | Trigger PAD7                      |
+| `X`       | Trigger PAD8                      |
+| `C`       | Trigger PAD9                      |
 | `M`       | Open pad mapper for selected kit  |
 | `Escape`  | Quit                              |
 
@@ -107,7 +112,7 @@ To test the audio engine standalone (without the TUI):
 python -m src.core.sampler
 ```
 
-Opens a minimal SDL window; use Q/W/A/S or a connected DS4. ESC to exit.
+Opens a minimal SDL window; use QWE/ASD/ZXC or a connected DS4. ESC to exit.
 
 ---
 

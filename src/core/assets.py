@@ -11,10 +11,23 @@ from src.core.types import PAD_IDS, PadId
 
 # Mapeo estándar por nombre de archivo (case-insensitive)
 _FILE_MAP: dict[str, PadId] = {
-    "l1": "L1", "kick": "L1", "bd": "L1",
-    "r1": "R1", "snare": "R1", "sd": "R1",
-    "l2": "L2", "hh_closed": "L2", "ch": "L2",
-    "r2": "R2", "hh_open": "R2", "oh": "R2",
+    "pad1": "PAD1", "kick": "PAD1", "bd": "PAD1", "l1": "PAD1",
+    "pad2": "PAD2", "snare": "PAD2", "sd": "PAD2", "r1": "PAD2",
+    "pad3": "PAD3", "tom_hi": "PAD3", "ht": "PAD3",
+    "pad4": "PAD4", "hh_closed": "PAD4", "ch": "PAD4", "l2": "PAD4",
+    "pad5": "PAD5", "hh_open": "PAD5", "oh": "PAD5", "r2": "PAD5",
+    "pad6": "PAD6", "tom_mid": "PAD6", "mt": "PAD6",
+    "pad7": "PAD7", "cowbell": "PAD7", "cb": "PAD7",
+    "pad8": "PAD8", "crash": "PAD8", "cr": "PAD8",
+    "pad9": "PAD9", "tom_low": "PAD9", "lt": "PAD9",
+}
+
+# Traducción de ids antiguos a los nuevos para retrocompatibilidad
+_LEGACY_PAD_ID_MAP: dict[str, str] = {
+    "L1": "PAD1",
+    "R1": "PAD2",
+    "L2": "PAD4",
+    "R2": "PAD5",
 }
 
 _IGNORED_DIRS: frozenset[str] = frozenset({
@@ -72,6 +85,9 @@ def load_kit_from_dir(dir_path: Path) -> dict[PadId, io.BytesIO]:
             mapping = json.loads(mapping_file.read_text())
             for pad_id_raw, rel_path in mapping.items():
                 pad_id_str = pad_id_raw.upper()
+                if pad_id_str in _LEGACY_PAD_ID_MAP:
+                    pad_id_str = _LEGACY_PAD_ID_MAP[pad_id_str]
+
                 if pad_id_str not in PAD_IDS:
                     continue
                 pad_id = cast(PadId, pad_id_str)

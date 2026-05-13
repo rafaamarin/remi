@@ -36,18 +36,23 @@ EVENT_WAIT_TIMEOUT_MS: Final[int] = 100
 
 # Mapeos derivados (los IDs de PadId nunca caen fuera de PAD_IDS).
 _BUTTON_TO_PAD: Final[dict[int, PadId]] = {
-    DS4_BUTTON_L1: "L1",
-    DS4_BUTTON_R1: "R1",
+    DS4_BUTTON_L1: "PAD1",
+    DS4_BUTTON_R1: "PAD2",
 }
 _AXIS_TO_PAD: Final[dict[int, PadId]] = {
-    DS4_AXIS_L2: "L2",
-    DS4_AXIS_R2: "R2",
+    DS4_AXIS_L2: "PAD4",
+    DS4_AXIS_R2: "PAD5",
 }
 _KEY_TO_PAD: Final[dict[int, PadId]] = {
-    pygame.K_q: "L1",
-    pygame.K_w: "R1",
-    pygame.K_a: "L2",
-    pygame.K_s: "R2",
+    pygame.K_q: "PAD1",
+    pygame.K_w: "PAD2",
+    pygame.K_e: "PAD3",
+    pygame.K_a: "PAD4",
+    pygame.K_s: "PAD5",
+    pygame.K_d: "PAD6",
+    pygame.K_z: "PAD7",
+    pygame.K_x: "PAD8",
+    pygame.K_c: "PAD9",
 }
 
 # === Constantes del mixer ===
@@ -315,7 +320,7 @@ class SamplerCore:
 
 
 def _run_demo() -> None:
-    """Demo standalone — abre ventana SDL para capturar Q/W/A/S como fallback."""
+    """Demo standalone — abre ventana SDL para capturar teclado como fallback."""
     event_queue: EventQueue = queue.Queue(maxsize=256)
     sampler = SamplerCore(event_queue=event_queue)
     sampler.start()
@@ -325,9 +330,9 @@ def _run_demo() -> None:
     font = pygame.font.SysFont(None, 18)
 
     if sampler.has_joystick:
-        print("Joystick: detectado — usa L1/L2/R1/R2 del mando")
+        print("Joystick: detectado — usa L1/R1/L2/R2 del mando para 4 pads")
     else:
-        print("Joystick: NO detectado — fallback teclado Q/W/A/S")
+        print("Joystick: NO detectado — fallback teclado QWE/ASD/ZXC")
     print("ESC o cerrar ventana para salir.\n")
 
     # El hilo principal ya no lee SDL, todo lo procesa el poll_loop.
@@ -340,7 +345,7 @@ def _run_demo() -> None:
             print(pad_event)
 
         screen.fill((20, 20, 30))
-        text = font.render("Q W A S = pads  |  ESC = salir", True, (200, 200, 200))
+        text = font.render("QWE ASD ZXC = pads  |  ESC = salir", True, (200, 200, 200))
         screen.blit(text, (10, 50))
         pygame.display.flip()
         pygame.time.wait(16)
