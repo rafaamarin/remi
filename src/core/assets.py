@@ -55,7 +55,7 @@ def scan_libraries(root: Path) -> list[Path]:
                 continue
             if entry.name.startswith(".") or entry.name in _IGNORED_DIRS:
                 continue
-            if (entry / "remi.json").is_file() or next(entry.rglob("*.wav"), None) is not None:
+            if (entry / "remi.json").is_file() or next(entry.glob("*.wav"), None) is not None:
                 candidates.append(entry)
     except OSError:
         return []
