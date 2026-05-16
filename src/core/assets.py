@@ -50,13 +50,38 @@ def scan_libraries(root: Path) -> list[Path]:
 
     candidates: list[Path] = []
     try:
+        import os
         for entry in root.iterdir():
             if not entry.is_dir():
                 continue
             if entry.name.startswith(".") or entry.name in _IGNORED_DIRS:
                 continue
-            if (entry / "remi.json").is_file() or next(entry.rglob("*.wav"), None) is not None:
+
+            # Optimization: Use a bounded recursive scan via os.walk to prevent blocking.
+            # `Path.rglob("*.wav")` without limits can synchronously block the UI thread
+            # for a long time on huge deep directories. By limiting the depth to a reasonable
+            # value (e.g. 2 levels deep), we preserve functionality (finding nested kit WAVs)
+            # while avoiding severe main thread blocking.
+            if (entry / "remi.json").is_file():
                 candidates.append(entry)
+                continue
+
+            found_wav = False
+
+            for root_dir, dirs, files in os.walk(entry):
+                # Check for .wav files
+                if any(f.lower().endswith(".wav") for f in files):
+                    found_wav = True
+                    break
+
+                # Limit traversal depth to 2 levels (entry -> subdir -> subsubdir)
+                depth = Path(root_dir).relative_to(entry).parts
+                if len(depth) >= 2:
+                    dirs.clear()  # Prevent os.walk from going deeper
+
+            if found_wav:
+                candidates.append(entry)
+
     except OSError:
         return []
 
