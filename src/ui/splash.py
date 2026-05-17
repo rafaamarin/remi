@@ -4,7 +4,7 @@ from rich.layout import Layout
 from rich.text import Text
 from rich.columns import Columns
 from rich.table import Table
-from rich.box import Box
+from rich import box
 
 
 ASCII_LOGO = """
@@ -47,7 +47,7 @@ def get_splash_screen() -> Layout:
         pad_edge=False,
         expand=False,
         border_style="magenta",
-        box=Box.DOUBLE,
+        box=box.DOUBLE,
     )
     controls.add_column(justify="left", style="magenta")
     controls.add_row("[bold white]▸[/white] [bold yellow]Q W E R T Y[/bold yellow] [dim]Keyboard row 1[/dim]")
@@ -63,7 +63,7 @@ def get_splash_screen() -> Layout:
         pad_edge=False,
         expand=False,
         border_style="yellow",
-        box=Box.DOUBLE,
+        box=box.DOUBLE,
     )
     features.add_column(justify="left", style="yellow")
     features.add_row("[bold white]▸[/white] [bold green]Zero-latency[/bold green]   [dim]sample triggering[/dim]")
@@ -95,7 +95,7 @@ def get_splash_screen() -> Layout:
         Layout(name="footer", ratio=1),
     )
 
-    layout["header"].update(header_content, tagline, version)
+    layout["header"].update(Align(Columns([header_content, tagline, version]), "center"))
     layout["body"].update(Align(body_content, "center"))
     layout["footer"].update(footer)
 
