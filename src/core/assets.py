@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 from pathlib import Path
 from typing import Final, cast
 
@@ -38,12 +39,31 @@ _IGNORED_DIRS: frozenset[str] = frozenset({
 MAX_SAMPLE_SIZE_BYTES: Final[int] = 25 * 1024 * 1024
 
 
+def _has_wav_files(directory: Path, max_depth: int = 2) -> bool:
+    """Busca archivos .wav en un directorio limitando la profundidad de búsqueda."""
+    start_depth = len(directory.parts)
+    try:
+        for root_dir, dirs, files in os.walk(directory):
+            current_depth = len(Path(root_dir).parts)
+            if current_depth - start_depth > max_depth:
+                del dirs[:]  # No buscar más profundo en esta rama
+                continue
+            if any(f.lower().endswith(".wav") for f in files):
+                return True
+    except OSError:
+        pass
+    return False
+
 def scan_libraries(root: Path) -> list[Path]:
     """Devuelve directorios top-level de ``root`` que parezcan kits.
 
     Un directorio es candidato si tiene un ``remi.json`` o al menos un ``.wav``
-    (recursivo). Se ordena alfabéticamente. Ignora dotdirs y carpetas internas
+    (recursivo limitado). Se ordena alfabéticamente. Ignora dotdirs y carpetas internas
     del proyecto.
+
+    Bolt Optimization: Replaced unbounded Path.rglob() with bounded os.walk()
+    (max_depth=2) to prevent synchronous blocking of the main thread during
+    the initial Textual UI loading phase when scanning deep directories.
     """
     if not root.is_dir():
         return []
@@ -55,7 +75,7 @@ def scan_libraries(root: Path) -> list[Path]:
                 continue
             if entry.name.startswith(".") or entry.name in _IGNORED_DIRS:
                 continue
-            if (entry / "remi.json").is_file() or next(entry.rglob("*.wav"), None) is not None:
+            if (entry / "remi.json").is_file() or _has_wav_files(entry):
                 candidates.append(entry)
     except OSError:
         return []
