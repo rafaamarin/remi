@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 from pathlib import Path
 from typing import Final, cast
 
@@ -38,6 +39,19 @@ _IGNORED_DIRS: frozenset[str] = frozenset({
 MAX_SAMPLE_SIZE_BYTES: Final[int] = 25 * 1024 * 1024
 
 
+def _has_wav_files(dir_path: Path, max_depth: int = 2) -> bool:
+    """Realiza una búsqueda acotada de archivos .wav para evitar bloqueos en el UI."""
+    base_path_str = str(dir_path)
+    base_depth = base_path_str.rstrip(os.sep).count(os.sep)
+    for current_root, dirs, files in os.walk(base_path_str):
+        current_depth = current_root.rstrip(os.sep).count(os.sep) - base_depth
+        if current_depth >= max_depth:
+            dirs.clear()
+        if any(f.lower().endswith(".wav") for f in files):
+            return True
+    return False
+
+
 def scan_libraries(root: Path) -> list[Path]:
     """Devuelve directorios top-level de ``root`` que parezcan kits.
 
@@ -55,7 +69,9 @@ def scan_libraries(root: Path) -> list[Path]:
                 continue
             if entry.name.startswith(".") or entry.name in _IGNORED_DIRS:
                 continue
-            if (entry / "remi.json").is_file() or next(entry.rglob("*.wav"), None) is not None:
+            # Optimization: Replace unbounded rglob with bounded os.walk
+            # This prevents UI thread blocking on deep directories while preserving nested file discovery
+            if (entry / "remi.json").is_file() or _has_wav_files(entry):
                 candidates.append(entry)
     except OSError:
         return []
