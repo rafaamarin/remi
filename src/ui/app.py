@@ -218,10 +218,23 @@ class RemiApp(App[None]):
         self._poll_sampler_events()
 
     def _refresh_libraries(self) -> None:
+        """Triggers the background worker to scan libraries."""
+        # Performance Optimization:
+        # scan_libraries can block the main thread for several seconds if there are deeply
+        # nested directories without .wav files. Moving it to a worker thread prevents UI freezing.
+        self._refresh_libraries_worker()
+
+    @work(exclusive=True, thread=True)
+    def _refresh_libraries_worker(self) -> None:
+        """Runs the potentially expensive library scan in a background thread."""
+        paths = scan_libraries(self._project_root) # Returns a list[Path] natively, not a generator
+        self.call_from_thread(self._update_library_ui, paths)
+
+    def _update_library_ui(self, paths: list[Path]) -> None:
         list_view = self.query_one("#lib-list", ListView)
         list_view.clear()
         list_view.append(LibraryItem(None))
-        for path in scan_libraries(self._project_root):
+        for path in paths:
             list_view.append(LibraryItem(path))
 
     @work(exclusive=True, thread=True)

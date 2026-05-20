@@ -1,0 +1,3 @@
+## 2024-05-20 - Expensive Operations During TUI Startup
+**Learning:** `Path.rglob` is lazy (returns a generator), but wrapping it in `next(generator, None)` can still block the main thread for several seconds when scanning deep directory structures that don't contain a match. Attempting to optimize this by restricting the depth introduced a breaking change.
+**Action:** Move potentially expensive, unbounded I/O operations (like deep file scanning) that execute during TUI mount into a Textual background worker thread (`@work(thread=True)`). This prevents synchronous UI blocking and preserves application responsiveness without sacrificing correctness.
