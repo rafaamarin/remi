@@ -1,0 +1,3 @@
+## 2025-05-22 - [Textual UI Blocking by Synchronous I/O]
+**Learning:** During UI initialization (e.g., in `on_mount`), running unbounded or deep I/O operations (like `Path.rglob` used for directory scanning) synchronously will block the main thread and freeze the UI presentation until the operation completes. In large file systems, this causes a significant perceptible lag.
+**Action:** Move expensive I/O operations into background threads. In Textual, this can be efficiently achieved using `@work(thread=True)` to execute the work off the main loop, and then pushing the results safely back to the main thread via `self.call_from_thread()`.

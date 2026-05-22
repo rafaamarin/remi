@@ -214,14 +214,25 @@ class RemiApp(App[None]):
     def on_mount(self) -> None:
         self.title = "REMI"
         self.sub_title = "DS4" if self._sampler.has_joystick else "Teclado QWE/ASD/ZXC"
-        self._refresh_libraries()
-        self._poll_sampler_events()
 
-    def _refresh_libraries(self) -> None:
+        # Performance optimization: Initialize UI with empty list (plus Default) immediately,
+        # then offload the expensive I/O `scan_libraries` (which uses unbounded Path.rglob)
+        # to a background worker thread. This prevents blocking the main UI thread during `on_mount`.
         list_view = self.query_one("#lib-list", ListView)
         list_view.clear()
         list_view.append(LibraryItem(None))
-        for path in scan_libraries(self._project_root):
+
+        self._refresh_libraries_worker()
+        self._poll_sampler_events()
+
+    @work(exclusive=True, thread=True)
+    def _refresh_libraries_worker(self) -> None:
+        paths = scan_libraries(self._project_root)
+        self.call_from_thread(self._update_libraries_list, paths)
+
+    def _update_libraries_list(self, paths: list[Path]) -> None:
+        list_view = self.query_one("#lib-list", ListView)
+        for path in paths:
             list_view.append(LibraryItem(path))
 
     @work(exclusive=True, thread=True)
