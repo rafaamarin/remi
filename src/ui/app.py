@@ -217,11 +217,22 @@ class RemiApp(App[None]):
         self._refresh_libraries()
         self._poll_sampler_events()
 
+    @work(exclusive=True, thread=True, group="lib-scan")
     def _refresh_libraries(self) -> None:
+        """
+        ⚡ Bolt Performance Optimization:
+        Moves I/O-bound library scanning to a background thread to prevent blocking
+        the main thread during Textual UI initialization (on_mount) or manual refreshes.
+        Impact: Reduces UI loading latency, especially on slow disks or large project trees.
+        """
+        libraries = scan_libraries(self._project_root)
+        self.call_from_thread(self._update_libraries_ui, libraries)
+
+    def _update_libraries_ui(self, libraries: list[Path]) -> None:
         list_view = self.query_one("#lib-list", ListView)
         list_view.clear()
         list_view.append(LibraryItem(None))
-        for path in scan_libraries(self._project_root):
+        for path in libraries:
             list_view.append(LibraryItem(path))
 
     @work(exclusive=True, thread=True)
