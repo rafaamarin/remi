@@ -218,10 +218,29 @@ class RemiApp(App[None]):
         self._poll_sampler_events()
 
     def _refresh_libraries(self) -> None:
+        # Bolt: Optimizing application load time
+        # Moving the library file system scan to a background worker to prevent
+        # blocking the Textual main thread during mount.
+        # Expected Impact: Eliminates UI freeze on startup in large project directories.
+        self._scan_libraries_worker()
+
+    @work(exclusive=True, thread=True)
+    def _scan_libraries_worker(self) -> None:
+        """Runs the library scan in a background thread."""
+        # Eagerly consume the generator in the background thread to ensure
+        # the blocking I/O actually happens here and not on the main thread
+        paths = list(scan_libraries(self._project_root))
+
+        worker = get_current_worker()
+        if not worker.is_cancelled:
+            self.call_from_thread(self._update_library_ui, paths)
+
+    def _update_library_ui(self, paths: list[Path]) -> None:
+        """Updates the library UI with scanned paths safely from main thread."""
         list_view = self.query_one("#lib-list", ListView)
         list_view.clear()
         list_view.append(LibraryItem(None))
-        for path in scan_libraries(self._project_root):
+        for path in paths:
             list_view.append(LibraryItem(path))
 
     @work(exclusive=True, thread=True)

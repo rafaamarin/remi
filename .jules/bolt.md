@@ -1,0 +1,3 @@
+## 2026-05-24 - Textual Main Thread Blocking via Deep File Scanning
+**Learning:** Synchronous deep file system scanning (`scan_libraries`) running during Textual's UI initialization (e.g., `on_mount`) blocks the main event loop, causing startup freezes in repositories with many or deep directories. Optimizing by artificially restricting the search depth bounds can introduce functional regressions.
+**Action:** Always offload potentially unbounded or expensive I/O operations to a background thread during TUI lifecycles using the `@work(thread=True)` decorator. Use `call_from_thread` for safe UI updates once the I/O has resolved.
