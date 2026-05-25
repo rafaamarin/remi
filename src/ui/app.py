@@ -217,11 +217,22 @@ class RemiApp(App[None]):
         self._refresh_libraries()
         self._poll_sampler_events()
 
+    @work(thread=True)
     def _refresh_libraries(self) -> None:
+        """
+        [Performance] Offloads deep file system scanning (`scan_libraries`) to a background thread.
+        This prevents blocking the main Textual UI thread during `on_mount`, ensuring
+        the application starts immediately and renders UI components at 60fps instead of
+        freezing during slow I/O operations across large file trees.
+        """
+        paths = scan_libraries(self._project_root)
+        self.call_from_thread(self._populate_libraries, paths)
+
+    def _populate_libraries(self, paths: list[Path]) -> None:
         list_view = self.query_one("#lib-list", ListView)
         list_view.clear()
         list_view.append(LibraryItem(None))
-        for path in scan_libraries(self._project_root):
+        for path in paths:
             list_view.append(LibraryItem(path))
 
     @work(exclusive=True, thread=True)
