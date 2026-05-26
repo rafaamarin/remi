@@ -1,0 +1,3 @@
+## 2024-05-26 - Unbounded I/O operations blocking Textual UI Thread
+**Learning:** During UI initialization (e.g. `on_mount` in Textual), running synchronous unbounded file system searches like `Path.rglob` can block the main thread and significantly delay the UI rendering, resulting in a frozen startup experience.
+**Action:** Always move potentially expensive I/O operations (like deep file scanning) into a Textual background worker thread (`@work(thread=True)`) and update the UI safely via `call_from_thread()`. Do not artificially bound search depth to optimize, as this can introduce functional regressions.
