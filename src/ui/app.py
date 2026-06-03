@@ -214,14 +214,22 @@ class RemiApp(App[None]):
     def on_mount(self) -> None:
         self.title = "REMI"
         self.sub_title = "DS4" if self._sampler.has_joystick else "Teclado QWE/ASD/ZXC"
-        self._refresh_libraries()
+        self._refresh_libraries_worker()
         self._poll_sampler_events()
 
-    def _refresh_libraries(self) -> None:
+    @work(exclusive=True, thread=True)
+    def _refresh_libraries_worker(self) -> None:
+        """⚡ Bolt: Offload library scanning to background thread.
+        Scanning directories can be slow and block the UI from rendering smoothly on mount.
+        """
+        paths = list(scan_libraries(self._project_root))
+        self.call_from_thread(self._update_libraries_ui, paths)
+
+    def _update_libraries_ui(self, paths: list[Path]) -> None:
         list_view = self.query_one("#lib-list", ListView)
         list_view.clear()
         list_view.append(LibraryItem(None))
-        for path in scan_libraries(self._project_root):
+        for path in paths:
             list_view.append(LibraryItem(path))
 
     @work(exclusive=True, thread=True)
