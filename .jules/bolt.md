@@ -1,0 +1,3 @@
+## 2024-05-24 - Textual UI startup blocked by synchronous I/O
+**Learning:** Doing synchronous I/O operations, like a recursive file search (`Path.rglob`), during Textual's `on_mount` lifecycle hook blocks the main thread, causing significant UI rendering delays or unresponsiveness during application startup.
+**Action:** Always offload expensive I/O operations (like scanning directories) to a Textual background worker thread using `@work(thread=True)`. Ensure the result is fully evaluated in the worker thread (not yielding a generator to the main thread) and update the UI safely using `call_from_thread()`, placing UI reset logic inside the callback to prevent race conditions.
