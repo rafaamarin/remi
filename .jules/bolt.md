@@ -1,0 +1,3 @@
+## 2024-05-18 - [Textual I/O Blocking Optimization]
+**Learning:** Avoid running synchronous unbounded I/O operations (like deep file scanning `Path.rglob`) during Textual UI loading phases like `on_mount`, as they block the main thread and degrade perceived startup time. Ensure that when using Textual's `@work(thread=True)`, I/O generators are fully evaluated to avoid the execution leaking into the main thread.
+**Action:** Move deep I/O operations from `on_mount` into `@work(thread=True)` workers, fully resolve them there, and update the UI securely using `call_from_thread()`. Keep UI update preparations (like clearing a list) inside `call_from_thread()` rather than pre-emptively on the main thread, to avoid race conditions.
